@@ -95,6 +95,7 @@ module CarrierWave
     # [image_integrity_error]   Returns an error object if the last file to be assigned caused an integrity error
     # [image_processing_error]  Returns an error object if the last file to be assigned caused a processing error
     # [image_download_error]    Returns an error object if the last file to be remotely assigned caused a download error
+    # [image_cache_error]       Returns an error object if the there were problems retrieving the file from cache
     #
     # [write_image_identifier]  Uses the write_uploader method to set the identifier.
     # [image_identifier]        Reads out the identifier of the file
@@ -111,6 +112,7 @@ module CarrierWave
     # [:mount_on => Symbol] if the name of the column to be serialized to differs you can override it using this option
     # [:ignore_integrity_errors => Boolean] if set to true, integrity errors will result in caching failing silently
     # [:ignore_processing_errors => Boolean] if set to true, processing errors will result in caching failing silently
+    # [:ignore_cache_errors => Boolean] if set to true, cache errors will result in storing failing silently (or loudly in the case of fog)
     #
     # === Examples
     #
@@ -227,6 +229,10 @@ module CarrierWave
           _mounter(:#{column}).integrity_error
         end
 
+        def #{column}_cache_error
+          _mounter(:#{column}).cache_error
+        end
+
         def #{column}_processing_error
           _mounter(:#{column}).processing_error
         end
@@ -291,7 +297,7 @@ module CarrierWave
     # this is an internal class, used by CarrierWave::Mount so that
     # we don't pollute the model with a lot of methods.
     class Mounter #:nodoc:
-      attr_reader :column, :record, :remote_url, :integrity_error, :processing_error, :download_error
+      attr_reader :column, :record, :remote_url, :integrity_error, :processing_error, :download_error, :cache_error
       attr_accessor :remove
 
       def initialize(record, column, options={})
@@ -327,9 +333,13 @@ module CarrierWave
         uploader.cache!(new_file)
         @integrity_error = nil
         @processing_error = nil
+        @cache_error = nil
       rescue CarrierWave::IntegrityError => e
         @integrity_error = e
         raise e unless option(:ignore_integrity_errors)
+      rescue CarrierWave::CacheError => e
+        @integrity_error = e
+        raise e unless option(:ignore_cache_errors)
       rescue CarrierWave::ProcessingError => e
         @processing_error = e
         raise e unless option(:ignore_processing_errors)
@@ -341,12 +351,16 @@ module CarrierWave
 
       def cache_name=(cache_name)
         uploader.retrieve_from_cache!(cache_name) unless uploader.cached?
+      rescue CarrierWave::CacheError => e
+        @cache_error = e
+        raise e unless option(:ignore_cache_errors)
       rescue CarrierWave::InvalidParameter
       end
 
       def remote_url=(url)
         @download_error = nil
         @integrity_error = nil
+        @cache_error = nil
 
         @remote_url = url
 
@@ -361,6 +375,9 @@ module CarrierWave
       rescue CarrierWave::IntegrityError => e
         @integrity_error = e
         raise e unless option(:ignore_integrity_errors)
+      rescue CarrierWave::CacheError => e
+        @integrity_error = e
+        raise e unless option(:ignore_cache_errors)
       end
 
       def store!

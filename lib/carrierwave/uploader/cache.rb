@@ -150,6 +150,7 @@ module CarrierWave
           self.cache_id, self.original_filename = cache_name.to_s.split('/', 2)
           @filename = original_filename
           @file = CarrierWave::SanitizedFile.new(cache_path)
+          raise CarrierWave::CacheError if !ignore_cache_errors && !File.exist?(cache_path)
         end
       end
 

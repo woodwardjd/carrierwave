@@ -273,6 +273,22 @@ describe CarrierWave::Uploader do
       @uploader.filename.should be_nil
       @uploader.cache_name.should be_nil
     end
+
+    it "should be able to read the file from the cache" do
+      @uploader.ignore_cache_errors = false
+      @uploader.cache!(File.open(file_path('test.jpg')))
+      cache_name = @uploader.cache_name
+      @uploader = @uploader_class.new
+      @uploader.retrieve_from_cache!(cache_name)
+      @uploader.read.should == File.open(file_path('test.jpg')).read
+    end
+
+    it "should toss an error if it can't read the file from the cache" do
+      running {
+        @uploader.ignore_cache_errors = false
+        @uploader.retrieve_from_cache!('20071201-1234-345-2255/test.jpeg')
+      }.should raise_error(CarrierWave::CacheError)
+    end
   end
 
   describe 'with an overridden, reversing, filename' do

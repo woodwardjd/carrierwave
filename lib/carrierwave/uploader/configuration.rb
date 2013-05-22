@@ -32,9 +32,11 @@ module CarrierWave
 
         # Mounting
         add_config :ignore_integrity_errors
+        add_config :ignore_cache_errors
         add_config :ignore_processing_errors
         add_config :ignore_download_errors
         add_config :validate_integrity
+        add_config :validate_cache
         add_config :validate_processing
         add_config :validate_download
         add_config :mount_on
@@ -134,9 +136,11 @@ module CarrierWave
             config.move_to_store = false
             config.remove_previously_stored_files_after_update = true
             config.ignore_integrity_errors = true
+            config.ignore_cache_errors = true
             config.ignore_processing_errors = true
             config.ignore_download_errors = true
             config.validate_integrity = true
+            config.validate_cache = true
             config.validate_processing = true
             config.validate_download = true
             config.root = lambda { CarrierWave.root }

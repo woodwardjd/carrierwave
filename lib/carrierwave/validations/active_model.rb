@@ -30,6 +30,16 @@ module CarrierWave
         end
       end
 
+      class CacheValidator < ::ActiveModel::EachValidator
+
+        def validate_each(record, attribute, value)
+          if e = record.send("#{attribute}_cache_error")
+            message = (e.message == e.class.to_s) ? :carrierwave_cache_error : e.message
+            record.errors.add(attribute, message)
+          end
+        end
+      end
+
       class DownloadValidator < ::ActiveModel::EachValidator
 
         def validate_each(record, attribute, value)
@@ -49,6 +59,14 @@ module CarrierWave
         #
         def validates_integrity_of(*attr_names)
           validates_with IntegrityValidator, _merge_attributes(attr_names)
+        end
+
+        # Makes the record invalid if the file couldn't be saved due to a cache error
+        #
+        # Accepts the usual parameters for validations in Rails (:if, :unless, etc...)
+        #
+        def validates_cache_of(*attr_names)
+          validates_with CacheValidator, _merge_attributes(attr_names)
         end
 
         ##

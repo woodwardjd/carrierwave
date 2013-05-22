@@ -673,6 +673,40 @@ describe CarrierWave::Mount do
     end
   end
 
+  describe '#mount_uploader with :ignore_cache_errors => false' do
+
+    before do
+      @class = Class.new
+      @class.send(:extend, CarrierWave::Mount)
+
+      @uploader = Class.new(CarrierWave::Uploader::Base)
+
+      @class.mount_uploader(:image, @uploader, :ignore_cache_errors => false)
+      @instance = @class.new
+      @uploader.class_eval do
+        def ignore_cache_errors
+          false
+        end
+      end
+    end
+
+    it "should raise an error if the file isn't there when setting from cache" do
+      running {
+        @instance.image_cache = '20071201-1234-345-2255/test.jpeg'
+      }.should raise_error(CarrierWave::CacheError)
+    end
+
+    it "should not raise an error if the file is there" do
+      @instance.image = stub_file('test.jpg')
+      cache = @instance.image_cache
+      @instance = @class.new
+      running {
+        @instance.image_cache = cache
+      }.should_not raise_error(CarrierWave::CacheError)
+    end
+  end
+
+
   describe '#mount_uploader with :ignore_processing_errors => false' do
 
     before do
