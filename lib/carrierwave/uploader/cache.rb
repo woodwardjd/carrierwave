@@ -41,6 +41,7 @@ module CarrierWave
         # This only works as long as you haven't done anything funky with your cache_dir.
         # It's recommended that you keep cache files in one place only.
         #
+        ## TODO: clean up S3 persistent cache with this method, too
         def clean_cached_files!(seconds=60*60*24)
           Dir.glob(File.expand_path(File.join(cache_dir, '*'), CarrierWave.root)).each do |dir|
             time = dir.scan(/(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})/).first.map { |t| t.to_i }
@@ -131,6 +132,12 @@ module CarrierWave
               @file = new_file.copy_to(cache_path, permissions, directory_permissions)
             end
           end
+          ## TODO: maybe make the link to the cached file not be on
+          ## the local FS, but on :fog?
+          if enable_persistent_cache == :fog
+            f = CarrierWave::Storage::Fog::File.new(self, storage, File.join(cache_dir, cache_name))
+            f.store(@file)
+          end
         end
       end
 
@@ -150,7 +157,21 @@ module CarrierWave
           self.cache_id, self.original_filename = cache_name.to_s.split('/', 2)
           @filename = original_filename
           @file = CarrierWave::SanitizedFile.new(cache_path)
-          raise CarrierWave::CacheError if !ignore_cache_errors && !File.exist?(cache_path)
+          if !File.exist? cache_path
+            if enable_persistent_cache == :fog
+              fog_p = File.join(cache_dir, cache_id, full_filename(filename))
+              f = CarrierWave::Storage::Fog::File.new(self, storage, fog_p)
+              sf = SanitizedFile.new :tempfile => StringIO.new(f.read),
+                     :filename => File.join(cache_id, full_filename(filename)),
+                     :content_type => f.content_type
+              @file = sf.move_to(cache_path)
+              if !File.exist? cache_path
+                raise CarrierWave::CacheError if !ignore_cache_errors
+              end
+            else
+              raise CarrierWave::CacheError if !ignore_cache_errors
+            end
+          end
         end
       end
 

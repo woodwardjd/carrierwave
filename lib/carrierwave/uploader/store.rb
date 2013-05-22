@@ -59,6 +59,10 @@ module CarrierWave
             new_file = storage.store!(@file)
             @file.delete if (delete_tmp_file_after_storage && ! move_to_store)
             delete_cache_id
+            if enable_persistent_cache == :fog
+              f = CarrierWave::Storage::Fog::File.new(self, storage, File.join(cache_dir, cache_name))
+              f.delete
+            end
             @file = new_file
             @cache_id = nil
           end

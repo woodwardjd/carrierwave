@@ -21,6 +21,7 @@ module CarrierWave
         add_config :move_to_cache
         add_config :move_to_store
         add_config :remove_previously_stored_files_after_update
+        add_config :enable_persistent_cache
 
         # fog
         add_config :fog_attributes
@@ -147,6 +148,7 @@ module CarrierWave
             config.base_path = CarrierWave.base_path
             config.enable_processing = true
             config.ensure_multipart_form = true
+            config.enable_persistent_cache = false
           end
         end
       end
